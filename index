@@ -1,0 +1,416 @@
+                item.innerHTML = `<svg class="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                  <span>${m}</span>`;
+                microsContainer.appendChild(item);
+            });
+
+            // Update Doughnut Chart
+            macroChartInst.data.datasets[0].data = [
+                parseFloat(pPct.toFixed(1)),
+                parseFloat(cPct.toFixed(1)),
+                parseFloat(fPct.toFixed(1))
+            ];
+            macroChartInst.update();
+        }
+
+        function clasificarIMC(imc) {
+            if (imc < 18.5) return "Bajo Peso";
+            if (imc < 25) return "Peso Normal";
+            if (imc < 30) return "Sobrepeso";
+            if (imc < 35) return "Obesidad I";
+            if (imc < 40) return "Obesidad II";
+            return "Obesidad III";
+        }
+
+        function generarMenuMexicano() {
+            if (!currentCalculatedData.kcal) return;
+
+            const numTiempos = parseInt(document.querySelector('input[name="tiemposComida"]:checked').value);
+            const { kcal, protG, choG, fatG, condicion } = currentCalculatedData;
+
+            // Percentage distribution per meal count
+            let distribucion = [];
+            if (numTiempos === 3) {
+                distribucion = [
+                    { nombre: 'Desayuno', pct: 0.30, icono: '🍳' },
+                    { nombre: 'Comida', pct: 0.40, icono: '🍲' },
+                    { nombre: 'Cena', pct: 0.30, icono: '🌮' }
+                ];
+            } else if (numTiempos === 4) {
+                distribucion = [
+                    { nombre: 'Desayuno', pct: 0.25, icono: '🍳' },
+                    { nombre: 'Colación Matutina', pct: 0.15, icono: '🍎' },
+                    { nombre: 'Comida', pct: 0.35, icono: '🍲' },
+                    { nombre: 'Cena', pct: 0.25, icono: '🌮' }
+                ];
+            } else if (numTiempos === 5) {
+                distribucion = [
+                    { nombre: 'Desayuno', pct: 0.25, icono: '🍳' },
+                    { nombre: 'Colación Matutina', pct: 0.10, icono: '🍏' },
+                    { nombre: 'Comida', pct: 0.35, icono: '🍲' },
+                    { nombre: 'Colación Vespertina', pct: 0.10, icono: '🥑' },
+                    { nombre: 'Cena', pct: 0.20, icono: '🌮' }
+                ];
+            } else if (numTiempos === 6) {
+                distribucion = [
+                    { nombre: 'Desayuno', pct: 0.20, icono: '🍳' },
+                    { nombre: 'Colación 1', pct: 0.10, icono: '🍏' },
+                    { nombre: 'Comida', pct: 0.30, icono: '🍲' },
+                    { nombre: 'Colación 2', pct: 0.10, icono: '🥑' },
+                    { nombre: 'Cena', pct: 0.20, icono: '🌮' },
+                    { nombre: 'Colación Nocturna', pct: 0.10, icono: '🥛' }
+                ];
+            }
+
+            // Database of Mexican dishes tailored per condition
+            const platillosDB = obtenerPlatillosMexicanos(condicion);
+
+            const container = document.getElementById('menuContainer');
+            container.innerHTML = '';
+
+            distribucion.forEach((tiempo, idx) => {
+                const tKcal = Math.round(kcal * tiempo.pct);
+                const tProt = Math.round(protG * tiempo.pct);
+                const tCho = Math.round(choG * tiempo.pct);
+                const tFat = Math.round(fatG * tiempo.pct);
+
+                // Select meal template based on meal type
+                let mealType = 'desayuno';
+                if (tiempo.nombre.toLowerCase().includes('comida')) mealType = 'comida';
+                else if (tiempo.nombre.toLowerCase().includes('cena')) mealType = 'cena';
+                else if (tiempo.nombre.toLowerCase().includes('colación')) mealType = 'colacion';
+
+                const opcionPlatillo = platillosDB[mealType] || platillosDB['desayuno'];
+
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 transition-all hover:border-emerald-300";
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">${tiempo.icono}</span>
+                            <div>
+                                <h4 class="font-extrabold text-slate-900 text-base">${tiempo.nombre}</h4>
+                                <span class="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                                    Aprox. ${tKcal} kcal (${Math.round(tiempo.pct * 100)}% del día)
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
+                            <span><b>P:</b> ${tProt}g</span>
+                            <span><b>C:</b> ${tCho}g</span>
+                            <span><b>G:</b> ${tFat}g</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <h5 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            ${opcionPlatillo.titulo}
+                        </h5>
+                        <ul class="text-xs text-slate-700 space-y-1.5 pl-4 list-disc marker:text-emerald-500">
+                            ${opcionPlatillo.ingredientes.map(ing => `<li>${ing}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    ${opcionPlatillo.tip ? `
+                        <div class="mt-2 p-2.5 bg-amber-50/80 rounded-xl border border-amber-200/60 text-[11px] text-amber-900 flex items-start gap-2">
+                            <svg class="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span><b>Consejo de Preparación Clínica:</b> ${opcionPlatillo.tip}</span>
+                        </div>
+                    ` : ''}
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('menuActions').classList.remove('hidden');
+        }
+
+        function obtenerPlatillosMexicanos(condicion) {
+            // Default Mexican dishes adjusted per condition
+            switch(condicion) {
+                case 'diabetes':
+                    return {
+                        desayuno: {
+                            titulo: "Huevos Revueltos con Nopales a la Mexicana y Frijoles de la Olla",
+                            ingredientes: [
+                                "2 piezas de huevo fresco (o 1 huevo + 2 claras) revueltos con 1 taza de nopales picados, jitomate, cebolla y chile verde al comal.",
+                                "1/2 taza de frijoles negros o bayos de la olla (enteros, no refritos) sazonados con epazote.",
+                                "2 tortillas de maíz nixtamalizado tradicionales.",
+                                "1/3 de pieza de aguacate hass.",
+                                "Té verde o café americano sin azúcar."
+                            ],
+                            tip: "Los nopales y el epazote aportan fibra soluble que reduce el impacto glucémico de la comida."
+                        },
+                        colacion: {
+                            titulo: "Tostada Horneada con Queso Panela y Pepino con Limón",
+                            ingredientes: [
+                                "1 tostada de maíz salmas o horneada sin grasa.",
+                                "40g de queso panela fresco en rebanadas.",
+                                "1 taza de pepinos en rodajas con limón, sal de grano moderada y chile en polvo sin azúcar."
+                            ],
+                            tip: "Snack de muy bajo índice glucémico y alto valor de saciedad."
+                        },
+                        comida: {
+                            titulo: "Pechuga de Pollo en Mole Ligero de Oaxaqueño o Tinga con Nopales",
+                            ingredientes: [
+                                "120g a 150g de pechuga de pollo deshebrada cocida con cebolla y ajo.",
+                                "Guisada en tinga casera con abundante jitomate, cebolla y chile chipotle, mezclada con 1 taza de nopales fritos al comal.",
+                                "2 tortillas de maíz nixtamalizado.",
+                                "Ensalada verde mexicana: lechuga, jitomate, cilantro y 1/3 de aguacate.",
+                                "Agua Jamaica natural infusionada sin azúcar."
+                            ],
+                            tip: "Evitar moles comerciales con manteca o azúcar añadida."
+                        },
+                        cena: {
+                            titulo: "Tacos de Salpicón de Res Magra en Tortilla de Maíz",
+                            ingredientes: [
+                                "90g de falda de res magra deshebrada.",
+                                "Mezclada con lechuga rebanada, jitomate, cebolla, orégano, vinagre de manzana y cilantro.",
+                                "2 tortillas de maíz nixtamalizado integrales.",
+                                "1/3 de aguacate hass."
+                            ],
+                            tip: "Cena ligera de rápida digestión y balance macronutricional."
+                        }
+                    };
+
+                case 'erc_predialisis':
+                    return {
+                        desayuno: {
+                            titulo: "Claras de Huevo a la Mexicana con Chayote al Vapor",
+                            ingredientes: [
+                                "3 claras de huevo a la mexicana con jitomate y cebolla cocidos en sartén antiadherente con spray de aceite.",
+                                "1 taza de chayotes en cubos hervidos (con técnica de doble cocción si requiere control estricto de potasio).",
+                                "1 a 2 tortillas de maíz nixtamalizado.",
+                                "Té de manzanilla."
+                            ],
+                            tip: "Proteína restringida pero de altísimo valor biológico sin aporte de fósforo inorgánico."
+                        },
+                        colacion: {
+                            titulo: "Manzana Cocida con Canela y Galletas Marías",
+                            ingredientes: [
+                                "1 manzana pequeña pelada y cocida al vapor con canela en polvo.",
+                                "4 piezas de galletas tipo María.",
+                                "Agua simple."
+                            ],
+                            tip: "Aporte energético no proteico seguro para la función renal."
+                        },
+                        comida: {
+                            titulo: "Pechuga de Pollo al Pastor Casero con Piña",
+                            ingredientes: [
+                                "90g de pechuga de pollo marinada en achiote casero, vinagre y chile guajillo (sin sal agregada).",
+                                "Asada con 2 rebanadas de piña fresca y cebolla al comal.",
+                                "2 tortillas de maíz.",
+                                "1/2 taza de arroz blanco cocido con verduras permitidas."
+                            ],
+                            tip: "Limitar o remojar previamente ingredientes ricos en potasio segun prescripción del nefrólogo."
+                        },
+                        cena: {
+                            titulo: "Quesadilla de Maíz con Queso Panela Bajo en Sodio y Calabacitas",
+                            ingredientes: [
+                                "1 a 2 tortillas de maíz nixtamalizado con 30g de queso panela bajo en sodio.",
+                                "1 taza de calabacitas a la mexicana al vapor.",
+                                "Té helado de limón casero."
+                            ],
+                            tip: "Evitar sazonadores artificiales, consomé de pollo en polvo o sal de mesa."
+                        }
+                    };
+
+                case 'erc_dialisis':
+                    return {
+                        desayuno: {
+                            titulo: "Huevos Enteros con Machaca Deshebrada Magra y Tortilla",
+                            ingredientes: [
+                                "2 huevos enteros revueltos con 30g de carne seca tipo machaca magra (sin sal añadida).",
+                                "2 tortillas de maíz nixtamalizado.",
+                                "1/3 de aguacate."
+                            ],
+                            tip: "Proteína concentrada necesaria para compensar pérdidas en el dializado. Estricto control de líquidos."
+                        },
+                        colacion: {
+                            titulo: "Tostada de Tinga de Pollo y Gelatina de Agua",
+                            ingredientes: [
+                                "1 tostada horneada con 50g de tinga de pechuga de pollo.",
+                                "1/2 taza de gelatina de agua de sabor."
+                            ],
+                            tip: "Contabilizar el volumen hídrico de la gelatina en el registro diario."
+                        },
+                        comida: {
+                            titulo: "Bistec de Res Magro a la Mexicana con Arroz Blanco",
+                            ingredientes: [
+                                "120g a 150g de bistec de res magro (cecina limpia o bola) asado a la mexicana.",
+                                "1/2 taza de arroz blanco seco.",
+                                "2 tortillas de maíz."
+                            ],
+                            tip: "Acompañar con quelantes de fósforo según indicación médica estricta."
+                        },
+                        cena: {
+                            titulo: "Ensalada de Pollo Deshebrado con Cítricos",
+                            ingredientes: [
+                                "100g de pechuga de pollo deshebrada sobre cama de lechuga, gajos de toronja o mandarina y aceite de oliva."
+                            ],
+                            tip: "Cena proteica de volumen controlado e hiperproteica."
+                        }
+                    };
+
+                case 'deporte_resistencia':
+                case 'deporte_fuerza':
+                    return {
+                        desayuno: {
+                            titulo: "Molletes Mexicanos Proteicos con Huevos y Frijoles Refritos al Comal",
+                            ingredientes: [
+                                "1 pieza de bolillo integral sin migajón untado con 1/2 taza de frijoles negros refritos en sartén antiadherente.",
+                                "60g de queso panela o manchego bajo en grasa fundido.",
+                                "2 huevos estrellados al comal encima con salsa verde o roja casera.",
+                                "1 plátano dominico o manzana.",
+                                "Licuado de avena con leche descremada o almendras."
+                            ],
+                            tip: "Excelente densidad de carbohidratos complejos y aminoácidos para síntesis muscular."
+                        },
+                        colacion: {
+                            titulo: "Licuado Energético de Plátano con Amaranto, Chía y Miel",
+                            ingredientes: [
+                                "250ml de leche o bebida vegetal.",
+                                "1 plátano maduro.",
+                                "3 cucharadas de amaranto natural mexicano.",
+                                "1 cucharada de semillas de chía."
+                            ],
+                            tip: "Ideal pre u post entrenamiento con alta biodisponibilidad."
+                        },
+                        comida: {
+                            titulo: "Pechuga de Pollo asada con Frijoles Charros Ligeros y Arroz Rojo",
+                            ingredientes: [
+                                "180g de pechuga de pollo o filete de res asado al comal.",
+                                "1 taza de arroz rojo casero cocido.",
+                                "1/2 taza de frijoles bayos con jitomate, cebolla, cilantro y salchicha de pavo.",
+                                "3 tortillas de maíz nixtamalizado.",
+                                "Agua de limón con chía."
+                            ],
+                            tip: "Carga completa de glucógeno y aminoácidos ramificados (BCAAs)."
+                        },
+                        cena: {
+                            titulo: "Tlacoyos de Haba/Frijol con Cecina Magra y Queso Cotija",
+                            ingredientes: [
+                                "2 tlacoyos de maíz azul o blanco rellenos de haba o frijol asados al comal.",
+                                "100g de cecina magra o pechuga de pollo encima.",
+                                "Nopales asados, salsa verde y 20g de queso cotija o panela rallado."
+                            ],
+                            tip: "Platillo tradicional mexicano con perfil nutricional completo."
+                        }
+                    };
+
+                case 'embarazo':
+                case 'lactancia':
+                    return {
+                        desayuno: {
+                            titulo: "Enfrijoladas de Queso Panela con Verdolagas en Salsa Verde",
+                            ingredientes: [
+                                "3 tortillas de maíz pasadas por caldillo de frijol negro espeso (rico en hierro y folato).",
+                                "Rellenas de 60g de queso panela fresco.",
+                                "Acompañadas de 1 taza de verdolagas cocidas en salsa verde.",
+                                "1/3 de aguacate por encima."
+                            ],
+                            tip: "Las verdolagas y los frijoles negros son fuentes estelares mexicanas de hierro y ácido fólico."
+                        },
+                        colacion: {
+                            titulo: "Licuado de Papaya con Chía y Almendras",
+                            ingredientes: [
+                                "1 taza de papaya picada en cubos.",
+                                "200ml de leche fortificada con Calcio y Vitamina D.",
+                                "1 cucharada de chía y 6 almendras."
+                            ],
+                            tip: "Favorece la digestión y aporta calcio celular."
+                        },
+                        comida: {
+                            titulo: "Caldo Tlalpeño con Pollo, Garbanzos, Ejotes y Aguacate",
+                            ingredientes: [
+                                "150g de pechuga de pollo deshebrada en caldo casero con jitomate, epazote y chile chipotle.",
+                                "1/2 taza de garbanzos cocidos y 1/2 taza de ejotes.",
+                                "1/2 aguacate picado en cubos al servirse.",
+                                "2 a 3 tortillas de maíz nixtamalizado."
+                            ],
+                            tip: "Caldo denso en micronutrientes y fluidos para producción láctea o gestación."
+                        },
+                        cena: {
+                            titulo: "Tacos de Guisado con Bistec de Res y Nopales",
+                            ingredientes: [
+                                "100g de bistec de res magro guisado con jitomate y cebolla.",
+                                "1 taza de nopales asados.",
+                                "2 a 3 tortillas de maíz."
+                            ],
+                            tip: "El hierro hemo de la carne de res se absorbe de forma óptima combinado con la vitamina C del jitomate."
+                        }
+                    };
+
+                default: // Sano, Obesidad, HTA
+                    return {
+                        desayuno: {
+                            titulo: "Huevos a la Mexicana con Nopales y Frijoles de la Olla",
+                            ingredientes: [
+                                "2 piezas de huevo entero a la mexicana (jitomate, cebolla, chile poblano) al comal con spray de aceite.",
+                                "1/2 taza de frijoles enteros de la olla con epazote.",
+                                "2 tortillas de maíz nixtamalizado.",
+                                "1/4 de aguacate hass."
+                            ],
+                            tip: "Platillo mexicano balanceado con excelente índice de saciedad y fibra dietética."
+                        },
+                        colacion: {
+                            titulo: "Jícama y Pepino con Limón y Chile en Polvo",
+                            ingredientes: [
+                                "1.5 tazas de jícama y pepino en bastones con jugo de limón fresco y chile tajín bajo en sodio."
+                            ],
+                            tip: "Snack hidratante, crujiente y de muy bajo aporte calórico."
+                        },
+                        comida: {
+                            titulo: "Pechuga de Pollo al Comal con Nopales, Arroz Verde y Pico de Gallo",
+                            ingredientes: [
+                                "130g de pechuga de pollo marinado con ajo, orégano y limón, asado al comal.",
+                                "2 nopales enteros asados a la parrilla.",
+                                "1/2 taza de arroz verde (poblano) cocido.",
+                                "Pico de gallo fresco (jitomate, cebolla, cilantro, limón).",
+                                "2 tortillas de maíz."
+                            ],
+                            tip: "Cero grasas saturadas trans, alto volumen vegetal y micronutrientes."
+                        },
+                        cena: {
+                            titulo: "Quesadillas de Maíz con Queso Panela, Champiñones y Flor de Calabaza",
+                            ingredientes: [
+                                "2 tortillas de maíz nixtamalizado al comal.",
+                                "50g de queso panela guisado con champiñones fritos y flor de calabaza al epazote.",
+                                "Salsa verde casera al gusto."
+                            ],
+                            tip: "Cena tradicional ligera, rica en calcio vegetal e inulina de hongos."
+                        }
+                    };
+            }
+        }
+
+        function copiarMenuTexto() {
+            const numTiempos = document.querySelector('input[name="tiemposComida"]:checked').value;
+            let texto = `=== PLAN NUTRICIONAL Y MENÚ MEXICANO ===\n`;
+            texto += `Energía Objetivo: ${currentCalculatedData.kcal} kcal/día\n`;
+            texto += `Macros: Prot: ${currentCalculatedData.protG}g | Carbos: ${currentCalculatedData.choG}g | Grasas: ${currentCalculatedData.fatG}g\n`;
+            texto += `Esquema: ${numTiempos} Tiempos de Comida\n\n`;
+
+            const cards = document.querySelectorAll('#menuContainer > div');
+            cards.forEach(c => {
+                const titulo = c.querySelector('h4').innerText;
+                const macros = c.querySelector('div.text-xs.font-medium').innerText;
+                const platillo = c.querySelector('h5').innerText;
+                const ingr = Array.from(c.querySelectorAll('ul li')).map(li => `- ${li.innerText}`).join('\n');
+                texto += `--- ${titulo} (${macros}) ---\n${platillo}\n${ingr}\n\n`;
+            });
+
+            const textarea = document.createElement('textarea');
+            textarea.value = texto;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                alert('¡Menú copiado exitosamente al portapapeles!');
+            } catch (err) {
+                alert('No se pudo copiar automáticamente. Por favor seleccione y copie manualmente.');
+            }
+            document.body.removeChild(textarea);
+        }
+    </script>
+</body>
+</html>
